@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic SDLC Guardrails</title>
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --ink: #1c1f24;
+    --muted: #5d636d;
+    --line: #dcdad3;
+    --accent: #1f5f8b;
+    --accent-soft: #e3eef6;
+    --warm: #b5532a;
+    --warm-soft: #f8e9e1;
+    --good: #2e7a4f;
+    --good-soft: #e3f2e8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171b;
+      --surface: #1e2127;
+      --ink: #eceae4;
+      --muted: #a2a7b0;
+      --line: #343842;
+      --accent: #7db6dd;
+      --accent-soft: #1d3040;
+      --warm: #e49a76;
+      --warm-soft: #3a261d;
+      --good: #7fcb9c;
+      --good-soft: #1c3226;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171b;
+    --surface: #1e2127;
+    --ink: #eceae4;
+    --muted: #a2a7b0;
+    --line: #343842;
+    --accent: #7db6dd;
+    --accent-soft: #1d3040;
+    --warm: #e49a76;
+    --warm-soft: #3a261d;
+    --good: #7fcb9c;
+    --good-soft: #1c3226;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.45;
+    overflow: hidden;
+  }
+
+  .deck { position: relative; width: 100%; height: 100%; }
+  .slide {
+    position: absolute; inset: 0;
+    display: none;
+    padding: clamp(24px, 5vw, 72px) clamp(16px, 7vw, 110px) 90px;
+    overflow-y: auto;
+  }
+  .slide.active { display: flex; flex-direction: column; animation: fade .35s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .kicker {
+    font-size: 13px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 { font-size: clamp(32px, 5vw, 58px); line-height: 1.08; margin: 0 0 18px; letter-spacing: -.02em; }
+  h2 { font-size: clamp(26px, 3.4vw, 40px); line-height: 1.15; margin: 0 0 8px; letter-spacing: -.015em; }
+  .lede { font-size: clamp(17px, 1.7vw, 22px); color: var(--muted); max-width: 60ch; margin: 0 0 28px; }
+  p { margin: 0 0 10px; }
+  strong { font-weight: 650; }
+
+  .grid { display: grid; gap: 18px; }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 760px) { .g2, .g3 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px 22px; font-size: 16px;
+  }
+  .card h3 { margin: 0 0 8px; font-size: 19px; }
+  .card .tag {
+    display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 999px; margin-bottom: 10px;
+  }
+  .tag.a { background: var(--accent-soft); color: var(--accent); }
+  .tag.w { background: var(--warm-soft); color: var(--warm); }
+  .tag.g { background: var(--good-soft); color: var(--good); }
+  .card ul { margin: 6px 0 0; padding-left: 18px; }
+  .card li { margin-bottom: 4px; }
+  .muted { color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 16px; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 650; width: 22%; }
+
+  .callout {
+    margin-top: 22px; padding: 16px 20px; border-left: 4px solid var(--warm);
+    background: var(--warm-soft); border-radius: 0 10px 10px 0; font-size: 17px;
+  }
+  .callout.blue { border-color: var(--accent); background: var(--accent-soft); }
+
+  /* Harness diagram */
+  .harness { display: flex; justify-content: center; margin: 4px 0 8px; }
+  .ring {
+    border: 2px solid var(--accent); border-radius: 22px; padding: 12px 16px 16px;
+    background: var(--accent-soft); width: min(720px, 100%);
+  }
+  .ring-label { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); text-align: center; margin-bottom: 10px; }
+  .parts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+  .parts div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 14px; line-height: 1.35; }
+  .parts b { display: block; font-size: 15px; margin-bottom: 2px; }
+  .core {
+    grid-column: 2; grid-row: 2; background: var(--ink) !important; color: var(--bg);
+    text-align: center; display: flex; flex-direction: column; justify-content: center; border: none !important;
+  }
+  .core b { font-size: 18px !important; }
+  @media (max-width: 760px) { .parts { grid-template-columns: 1fr 1fr; } .core { grid-column: auto; grid-row: auto; } }
+
+  /* Layers */
+  .layers { display: flex; flex-direction: column; gap: 10px; max-width: 860px; }
+  .layer { display: grid; grid-template-columns: 190px 1fr 150px; gap: 16px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+  .layer .name { font-weight: 700; font-size: 17px; }
+  .layer .freq { font-size: 13px; font-weight: 700; text-align: right; color: var(--muted); }
+  .layer.l1 { border-left: 6px solid var(--accent); }
+  .layer.l2 { border-left: 6px solid var(--good); margin-left: 24px; }
+  .layer.l3 { border-left: 6px solid var(--warm); margin-left: 48px; }
+  @media (max-width: 760px) { .layer { grid-template-columns: 1fr; } .layer .freq { text-align: left; } .layer.l2, .layer.l3 { margin-left: 0; } }
+
+  /* Flow */
+  .flow { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+  .step { flex: 1 1 150px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; font-size: 15px; position: relative; }
+  .step .n { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .08em; }
+  .step b { display: block; font-size: 16px; margin: 4px 0; }
+  .step.gate { border-color: var(--warm); background: var(--warm-soft); }
+  .step.gate .n { color: var(--warm); }
+  .arrow { align-self: center; color: var(--muted); font-size: 22px; }
+  @media (max-width: 760px) { .arrow { display: none; } }
+
+  .big-quote { font-size: clamp(22px, 2.6vw, 32px); line-height: 1.3; max-width: 34ch; font-weight: 600; margin: 8px 0 24px; }
+  .big-quote em { color: var(--warm); font-style: normal; }
+
+  ol.asks { counter-reset: a; list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; max-width: 900px; }
+  ol.asks li { counter-increment: a; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px 14px 64px; position: relative; font-size: 17px; }
+  ol.asks li::before { content: counter(a); position: absolute; left: 18px; top: 12px; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--surface); font-weight: 700; display: grid; place-items: center; }
+  ol.asks .who { display: block; font-size: 14px; color: var(--muted); margin-top: 2px; }
+
+  /* Controls */
+  .nav {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 58px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 0 clamp(16px, 4vw, 40px); background: var(--bg); border-top: 1px solid var(--line); z-index: 5;
+  }
+  .nav button {
+    background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 14px; font-size: 14px; cursor: pointer;
+  }
+  .nav button:hover { border-color: var(--accent); }
+  .nav button:disabled { opacity: .4; cursor: default; }
+  .progress { flex: 1; height: 4px; background: var(--line); border-radius: 4px; overflow: hidden; max-width: 420px; }
+  .progress span { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+  .count { font-size: 13px; color: var(--muted); min-width: 52px; text-align: center; }
+
+  @media print {
+    body { overflow: visible; }
+    .nav { display: none; }
+    .slide { position: relative; display: flex !important; page-break-after: always; min-height: 100vh; animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- 1. Title -->
+  <section class="slide" style="justify-content:center">
+    <div class="kicker">Agentic SDLC · Leadership briefing</div>
+    <h1>Building software with AI agents:<br>the harness, the rules, and who does what</h1>
+    <p class="lede">What changes in how we build apps when AI agents write much of the code, and where business, IT, privacy and security fit in.</p>
+    <p class="muted" style="font-size:15px">Use ← → or the buttons below to move between slides.</p>
+  </section>
+
+  <!-- 2. Before vs after -->
+  <section class="slide">
+    <div class="kicker">The shift</div>
+    <h2>What changes, and what doesn't</h2>
+    <p class="lede">People still decide what to build and what is acceptable. What changes is who types the code, and how our standards get enforced.</p>
+    <table>
+      <thead><tr><th></th><th>Before AI</th><th>Agentic SDLC</th></tr></thead>
+      <tbody>
+        <tr><td>Who writes code</td><td>Developers write each line</td><td>AI agents draft most code; developers direct, review and own it</td></tr>
+        <tr><td>How standards are applied</td><td>Wikis, onboarding, tribal knowledge, reviewer memory</td><td>Written down once as rules and checks that run on every change, automatically</td></tr>
+        <tr><td>Speed and volume</td><td>Limited by developer hours</td><td>Much more code, much faster, so manual review alone can't keep up</td></tr>
+        <tr><td>Where quality comes from</td><td>Mostly the skill of the person writing it</td><td>Mostly the <strong>harness</strong>: the instructions, tools, checks and gates around the agent</td></tr>
+        <tr><td>Business role</td><td>Requirements at the start, testing at the end</td><td>Also defines the guardrails up front: what must never happen</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 3. What is a harness -->
+  <section class="slide">
+    <div class="kicker">Key concept</div>
+    <h2>What is a "harness"?</h2>
+    <p class="lede" style="max-width:72ch;margin-bottom:16px">The AI model is the engine. The <strong>harness</strong> is everything around it that steers it, limits it and checks its work, like a capable new hire working inside our processes.</p>
+    <div class="harness">
+      <div class="ring">
+        <div class="ring-label">The harness, set up by us</div>
+        <div class="parts">
+          <div><b>Instructions</b>Our conventions, architecture and "how we do things here"</div>
+          <div><b>Context</b>The codebase, docs, approved patterns and examples</div>
+          <div><b>Tools &amp; permissions</b>What the agent may read, run or change, and what it may not</div>
+          <div><b>Rules &amp; linters</b>Automatic checks for code quality, privacy and security</div>
+          <div class="core"><b>AI agent</b>writes the code</div>
+          <div><b>Tests</b>Proof the app still does what the business needs</div>
+          <div><b>Review gates</b>A person approves before anything ships</div>
+          <div><b>Pipeline</b>The same checks run again before merge and deploy</div>
+          <div><b>Audit trail</b>A record of what changed, why, and who approved it</div>
+        </div>
+      </div>
+    </div>
+    <div class="callout blue" style="margin-top:14px">Most of the harness is made of things we already know: coding standards, code review, automated tests, CI/CD. What's new is that the AI agent reads and follows them on every change.</div>
+  </section>
+
+  <!-- 4. Rebuilt each time? -->
+  <section class="slide">
+    <div class="kicker">Common question</div>
+    <h2>Do we rebuild the harness for every app? No.</h2>
+    <p class="lede">It works like building codes. The city writes the code once, every house follows it, and each house adds only what is specific to it. We build the harness in layers, and each app inherits from the layers above.</p>
+    <div class="layers">
+      <div class="layer l1"><div class="name">Organization baseline</div><div>Standard linters and rulesets, privacy and security rules, approved tools and permissions, pipeline checks</div><div class="freq">Built once, then maintained</div></div>
+      <div class="layer l2"><div class="name">Team / platform</div><div>Shared config for a language or stack: rule severities, approved data layer, common patterns</div><div class="freq">Per stack, occasionally tuned</div></div>
+      <div class="layer l3"><div class="name">Individual app</div><div>App-specific instructions and context, its own tests, any exceptions (documented and approved)</div><div class="freq">Small, per app</div></div>
+    </div>
+    <div class="callout">Every new app starts with most of the guardrails already in place. A rule added to the baseline protects every app at once. The harness gets better over time; it doesn't start from zero each time.</div>
+  </section>
+
+  <!-- 5. Pick, configure, write -->
+  <section class="slide">
+    <div class="kicker">Rules in the harness</div>
+    <h2>Mostly we pick and configure. We write only what's specific to us.</h2>
+    <p class="lede">"Linting rules" are automatic checks that read code and flag problems before a person ever sees it. There are three levels of effort.</p>
+    <div class="grid g3">
+      <div class="card">
+        <span class="tag a">Use as-is</span>
+        <h3>Standard linters</h3>
+        <p>The standard linter for each language, with a community or vendor ruleset.</p>
+        <p class="muted">Covers the generic, mechanical checks. No need to reinvent them.</p>
+      </div>
+      <div class="card">
+        <span class="tag g">Configure</span>
+        <h3>Tune to our standards</h3>
+        <p>Turn rules on or off and set the severity: <strong>warning</strong> or <strong>blocks the merge</strong>.</p>
+        <p class="muted">A team lead or platform engineer does this once in a shared config, and apps inherit it.</p>
+      </div>
+      <div class="card">
+        <span class="tag w">Write custom</span>
+        <h3>Rules only we need</h3>
+        <p>Usually just a handful, for things unique to our business and our data.</p>
+        <p class="muted">Agents can draft them; a person who understands the risk decides what they are.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Custom rules -->
+  <section class="slide">
+    <div class="kicker">Custom rules</div>
+    <h2>Turning our "never do this" list into automatic enforcement</h2>
+    <p class="big-quote">Today our most important rules live in policy documents and people's heads. In a harness they become <em>checks that run on every change</em>, whether a person or an agent wrote the code.</p>
+    <div class="grid g2">
+      <div class="card">
+        <span class="tag w">Example</span>
+        <h3>"Never log a claimant identifier"</h3>
+        <p class="muted">Protects personal data from leaking into log files that many people and systems can read.</p>
+      </div>
+      <div class="card">
+        <span class="tag w">Example</span>
+        <h3>"All database access goes through the approved data layer"</h3>
+        <p class="muted">Keeps access control, auditing and data handling consistent across every app.</p>
+      </div>
+    </div>
+    <div class="callout blue">Few in number, high in value. Writing them is cheap. Choosing the right ones takes judgment about the business and its risks.</div>
+  </section>
+
+  <!-- 7. Roles -->
+  <section class="slide">
+    <div class="kicker">Who does what</div>
+    <h2>Roles in building an app with agents</h2>
+    <table>
+      <thead><tr><th>Role</th><th>Before AI</th><th>Agentic SDLC</th></tr></thead>
+      <tbody>
+        <tr><td>Business / product owner</td><td>Writes requirements, accepts the finished work</td><td>Same, plus clear acceptance criteria the agent and tests can check against</td></tr>
+        <tr><td>Privacy &amp; security</td><td>Policies, periodic reviews and audits, often after the build</td><td><strong>Defines the "never" rules up front</strong>, which engineers then encode as automated checks</td></tr>
+        <tr><td>Platform engineer / team lead</td><td>Sets up tooling and pipelines</td><td><strong>Owns the shared harness</strong>: picks and configures rules, maintains the baseline every app inherits</td></tr>
+        <tr><td>Developers</td><td>Write and test the code</td><td>Direct agents, review and own the output, write the custom rules, handle the hard problems</td></tr>
+        <tr><td>AI agents</td><td>n/a</td><td>Draft code, tests and even rule drafts, all inside the harness. They never decide policy.</td></tr>
+        <tr><td>Reviewers / approvers</td><td>Read every line for everything</td><td>Focus on intent, design and risk, because the mechanical checks are already automated</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 8. A change, end to end -->
+  <section class="slide">
+    <div class="kicker">How it works day to day</div>
+    <h2>How a change moves through the harness</h2>
+    <p class="lede">Every change passes the same gates, whether a person or an agent wrote it. Problems are caught in seconds, not in production.</p>
+    <div class="flow">
+      <div class="step"><span class="n">1 · PEOPLE</span><b>Define the work</b>Business need and acceptance criteria</div>
+      <div class="arrow">→</div>
+      <div class="step"><span class="n">2 · AGENT</span><b>Draft the change</b>Following our instructions and context</div>
+      <div class="arrow">→</div>
+      <div class="step gate"><span class="n">3 · AUTOMATIC</span><b>Rules &amp; tests run</b>Linters, custom rules, tests. The agent fixes what fails.</div>
+      <div class="arrow">→</div>
+      <div class="step gate"><span class="n">4 · PEOPLE</span><b>Human review</b>Is this the right change? Is the risk acceptable?</div>
+      <div class="arrow">→</div>
+      <div class="step"><span class="n">5 · PIPELINE</span><b>Merge &amp; deploy</b>Checks run again; full audit trail kept</div>
+    </div>
+    <div class="callout">A rule set to "blocks the merge" can't be skipped by an agent or a person in a hurry. That is how the privacy and security rules become guaranteed rather than hoped-for.</div>
+  </section>
+
+  <!-- 9. Non-coders -->
+  <section class="slide">
+    <div class="kicker">Where non-coders contribute</div>
+    <h2>The most important decisions happen before any code is written</h2>
+    <p class="lede">Business and governance leaders contribute <strong>upstream of the code</strong>: deciding which rules matter. Engineers and agents turn those decisions into enforcement.</p>
+    <div class="grid g2">
+      <div class="card">
+        <span class="tag w">Highest value</span>
+        <h3>Privacy &amp; security rules</h3>
+        <p>What must <strong>never</strong> be:</p>
+        <ul><li>logged</li><li>stored</li><li>exposed</li></ul>
+        <p class="muted" style="margin-top:8px">Get these from our privacy and security people, then have engineers encode them.</p>
+      </div>
+      <div class="card">
+        <span class="tag a">Also valuable</span>
+        <h3>Business rules &amp; boundaries</h3>
+        <ul>
+          <li>Which data is sensitive, and why</li>
+          <li>Which systems are the approved source of truth</li>
+          <li>Which mistakes would be most costly to customers or regulators</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. Next steps -->
+  <section class="slide">
+    <div class="kicker">Recommended next steps</div>
+    <h2>Getting started</h2>
+    <p class="lede">Small, concrete steps. Each one builds the shared harness that every future app inherits.</p>
+    <ol class="asks">
+      <li>Name an owner for the shared harness baseline.<span class="who">Platform engineering / IT</span></li>
+      <li>Adopt the standard linters and rulesets for our main languages, in one shared config.<span class="who">Platform engineer or team lead</span></li>
+      <li>Hold a short working session to produce our "never log, store or expose" list.<span class="who">Privacy &amp; security, with business owners</span></li>
+      <li>Encode the top handful of those as custom rules that block the merge.<span class="who">Engineers (agents draft, humans approve)</span></li>
+      <li>Pilot it on one app, measure what gets caught, then roll the baseline out to others.<span class="who">One delivery team, reporting back to this group</span></li>
+    </ol>
+  </section>
+
+</div>
+
+<nav class="nav" aria-label="Slide navigation">
+  <button id="prev" aria-label="Previous slide">← Prev</button>
+  <div class="progress" aria-hidden="true"><span id="bar"></span></div>
+  <span class="count" id="count"></span>
+  <button id="theme" aria-label="Toggle light or dark theme">Theme</button>
+  <button id="next" aria-label="Next slide">Next →</button>
+</nav>
+
+<script>
+  (function () {
+    var slides = document.querySelectorAll('.slide');
+    var prev = document.getElementById('prev');
+    var next = document.getElementById('next');
+    var bar = document.getElementById('bar');
+    var count = document.getElementById('count');
+    var i = 0;
+    var fromHash = parseInt((location.hash || '').replace('#', ''), 10);
+    if (fromHash >= 1 && fromHash <= slides.length) i = fromHash - 1;
+
+    function show(n) {
+      i = Math.max(0, Math.min(slides.length - 1, n));
+      slides.forEach(function (s, k) { s.classList.toggle('active', k === i); });
+      prev.disabled = i === 0;
+      next.disabled = i === slides.length - 1;
+      bar.style.width = ((i + 1) / slides.length * 100) + '%';
+      count.textContent = (i + 1) + ' / ' + slides.length;
+      history.replaceState(null, '', '#' + (i + 1));
+    }
+
+    prev.onclick = function () { show(i - 1); };
+    next.onclick = function () { show(i + 1); };
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); show(i + 1); }
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(i - 1); }
+      if (e.key === 'Home') show(0);
+      if (e.key === 'End') show(slides.length - 1);
+    });
+
+    var root = document.documentElement;
+    document.getElementById('theme').onclick = function () {
+      var dark = root.dataset.theme
+        ? root.dataset.theme === 'dark'
+        : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      root.dataset.theme = dark ? 'light' : 'dark';
+    };
+
+    show(i);
+  })();
+</script>
+</body>
+</html>
